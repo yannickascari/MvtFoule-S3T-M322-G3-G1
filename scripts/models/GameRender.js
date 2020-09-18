@@ -1,0 +1,11 @@
+class GameRender{
+
+    constructor() {
+    }
+
+    update()
+    {
+
+    }
+
+}
