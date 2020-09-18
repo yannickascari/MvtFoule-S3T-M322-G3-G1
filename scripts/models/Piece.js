@@ -1,7 +1,5 @@
 class Piece extends CanvasElement{
 
-    static COLOR = 'black';
-
     constructor(cvs,x,y,h,w,h_s) {
         super(cvs);
         this.x = x;
@@ -15,7 +13,7 @@ class Piece extends CanvasElement{
     {
 
         ctx.beginPath();
-        this.canvas.strokeStyle = Piece.COLOR;
+        this.canvas.strokeStyle = COLOR;
         this.canvas.moveTo(this.x,this.y);
         this.canvas.lineTo(this.x+a_x,this.y+a_y);
         this.canvas.stroke();
