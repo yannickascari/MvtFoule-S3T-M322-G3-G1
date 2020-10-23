@@ -1,7 +1,10 @@
 class Personne extends CanvasElement{
 
-    constructor(cvs) {
+    constructor(cvs,obj) {
         super(cvs);
+        this.x = obj.x;
+        this.y = obj.y;
+        this.r = obj.r;
     }
 
     draw()
@@ -9,9 +12,16 @@ class Personne extends CanvasElement{
 
         this.canvas.beginPath();
         this.canvas.fillStyle="#f57611";
-        this.canvas.arc(300, 300, 15, 0, 2 * Math.PI);
+        this.canvas.arc(this.x, this.y, this.r, 0, 2 * Math.PI);
         this.canvas.fill();
         this.canvas.stroke();
+
+    }
+
+    move()
+    {
+
+        this.x++;
 
     }
 
