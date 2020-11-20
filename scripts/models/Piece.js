@@ -25,8 +25,61 @@ class Piece extends CanvasElement{
             let o = this.getRndPerso();
             while (!this.isNotSuperImposed(o))
                 o = this.getRndPerso();
-            this.personnes.push(new Personne(cvs,o));
+            let object = this.getVectorToExit(o);
+            const coefficient = Piece.getRndInteger(VELOCITY_MIN,VELOCITY_MAX);
+            let vx = object.x*coefficient;
+            let vy = object.y*coefficient;
+            let person = new Personne(cvs,o,vx,vy);
+            this.personnes.push(person);
         }
+    }
+
+    ft()
+    {
+
+    }
+
+    get allVectors()
+    {
+        let resultEin = {};
+        let resultS = {};
+        for(const person of this.personnes){
+            resultEin[person] = [];
+            resultS[person] = [];
+            for(const otherPerson of this.personnes)
+                if(person !== otherPerson) {
+                    resultEin[person].push(person.getEinVector(otherPerson));
+                    let s = person.getNorme(person)
+                }
+        }
+        return resultEin;
+    }
+
+    /**
+     *
+     * @param
+     * @returns {{x,y}}
+     */
+
+    getVectorToExit(o)
+    {
+        let vExit = {
+            x : this.exitPosition.x - o.x,
+            y : this.exitPosition.y - o.y,
+        };
+        let norme = Math.sqrt(Math.pow(vExit.x,2)+Math.pow(vExit.y,2));
+        return {
+            x : vExit.x/norme,
+            y : vExit.y/norme
+        };
+    }
+
+    get exitPosition()
+    {
+        return {
+            x : this.cst_x,
+            y : this.cst_y+this.h/2
+        };
     }
 
     drawLine(a_x,a_y)
@@ -43,8 +96,8 @@ class Piece extends CanvasElement{
     isNotSuperImposed(rndPerso)
     {
         for (const perso of this.personnes) {
-            if(Math.sqrt(Math.pow(perso.x - rndPerso.x,2)+Math.pow(perso.y - rndPerso.y,2)) >= rndPerso.r + perso.r)
-               continue;
+            if(perso.noCollisionPerson(rndPerso))
+                continue;
             return false;
         }
         return true;
@@ -52,21 +105,23 @@ class Piece extends CanvasElement{
 
     getRndPerso()
     {
-        let r = this.getRndInteger(13,17)
+        let r = Piece.getRndInteger(13,17)
         return {
-            x : this.getRndInteger(this.x+r,this.x+this.w - r),
-            y : this.getRndInteger(this.y+r,this.y+this.h-r),
+            x : Piece.getRndInteger(this.x+r,this.x+this.w - r),
+            y : Piece.getRndInteger(this.y+r,this.y+this.h-r),
             r : r
-        };
+        }
+
     }
 
-    getRndInteger(min, max) {
+    static getRndInteger(min, max) {
         return Math.floor(Math.random() * (max - min + 1) ) + min;
     }
 
     drawPiece()
     {
-
+        this.x = this.cst_x;
+        this.y = this.cst_y;
         this.drawLine(this.w,0);
         this.x += this.w;
         this.drawLine(0,this.h);
@@ -79,5 +134,70 @@ class Piece extends CanvasElement{
         this.drawLine(0,(this.h/2)-(this.h_s/2));
 
     }
+
+
+    update()
+    {
+        this.drawPiece();
+        for (const person of this.personnes) {
+            person.move();
+            for(const otherPerson of this.personnes)
+                if(!(otherPerson === person))
+                    if(!otherPerson.noCollisionPerson(person)) {
+                        otherPerson.handleCollision(person);
+                    }
+            if(!person.isOutside) {
+                let collisionObject = this.pieceCollision(person);
+                person.pieceCollision(collisionObject.collisionType,this);
+            }
+            person.draw();
+        }
+    }
+
+    /**
+     *
+     * @param person {Personne}
+     * @returns {*}
+     */
+
+    pieceCollision(person)
+    {
+        let midLeft = this.cst_x+this.h/2;
+        let y1 = midLeft-this.h_s/2;
+        let y2 = midLeft+this.h_s/2;
+        let firstCondition = !(person.x-person.r>=this.cst_x && person.x+person.r <= this.cst_x+this.w);
+        let secondCondition = !(person.y + person.r<=this.cst_y+this.h && person.y-person.r>=this.cst_y);
+        let exitCondition = person.y-person.r>y1 && person.y+person.r<y2 && firstCondition;
+
+        if(exitCondition)
+        {
+            return {
+                collision : false,
+                collisionType : "exit",
+            }
+        }
+        else if(firstCondition && secondCondition)
+        {
+            return {
+                collision : true,
+                collisionType : "XY"
+            };
+        }
+        else if(firstCondition)
+            return {
+                collision : true,
+                collisionType : "X"
+            };
+        else if(secondCondition)
+            return {
+                collision : true,
+                collisionType: "y"
+            };
+        return {
+            collision : false,
+            collisionType: null
+        };
+    }
+
 
 }
