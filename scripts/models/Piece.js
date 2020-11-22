@@ -32,27 +32,54 @@ class Piece extends CanvasElement{
             let person = new Personne(cvs,o,vx,vy);
             this.personnes.push(person);
         }
+
     }
 
-    ft()
+    getDistanceToLine(person)
     {
-
+        return Math.abs(this.cst_x*person.x+this.cst_y*person.y+this.h)/(Math.sqrt(Math.pow(this.cst_x,2)+Math.pow(this.cst_y,2)));
     }
 
     get allVectors()
     {
-        let resultEin = {};
-        let resultS = {};
-        for(const person of this.personnes){
-            resultEin[person] = [];
-            resultS[person] = [];
-            for(const otherPerson of this.personnes)
+        let resultEin = new Map();
+        let resultS = new Map();
+        let resultI = new Map();
+        let resultJ = new Map();
+        let xn = new Map();
+        let vn = new Map();
+        for(const person of this.personnes) {
+            resultEin.set(person, new Map());
+            resultS.set(person, new Map());
+            xn.set(person,{
+                x: person.x,
+                y: person.y
+            });
+            vn.set(person,{
+                x: person.xvelocity,
+                y: person.yvelocity
+            });
+            for (const otherPerson of this.personnes){
                 if(person !== otherPerson) {
-                    resultEin[person].push(person.getEinVector(otherPerson));
-                    let s = person.getNorme(person)
+                    resultEin.get(person).set(otherPerson, person.getEinVector(otherPerson));
+                    let r = person.getNorme(otherPerson);
+                    r -= (person.r + otherPerson.r);
+                    resultS.get(person).set(otherPerson, r);
+                    if (resultS.get(person).get(otherPerson) < (otherPerson.r + person.r) / 10) {
+                        resultI.set(person, person);
+                        resultJ.set(person, otherPerson);
+                    }
                 }
+            }
         }
-        return resultEin;
+        return {
+            ein : resultEin,
+            s : resultS,
+            I : resultI,
+            J : resultJ,
+            x_n : xn,
+            y_n : vn
+        };
     }
 
     /**
@@ -135,23 +162,99 @@ class Piece extends CanvasElement{
 
     }
 
-
-    update()
+    plus(a)
     {
+        if(a>0)
+            return a;
+        else return 0;
+    }
+
+    update() {
         this.drawPiece();
-        for (const person of this.personnes) {
-            person.move();
-            for(const otherPerson of this.personnes)
-                if(!(otherPerson === person))
-                    if(!otherPerson.noCollisionPerson(person)) {
-                        otherPerson.handleCollision(person);
+        let residue = 2. * EPSILON;
+        let p = this.initP();
+        let vectors = this.allVectors;
+        let s = vectors.s;
+        while (residue > EPSILON) {
+            let residueX = 2. * EPSILONX;
+            while (residueX > EPSILONX) {
+                residueX = 0;
+                for (const [k,m] of vectors.I)
+                {
+                    let otherPerson = vectors.J.get(m);
+                    m.xvelocity += DT * p.get(m).get(otherPerson) * vectors.ein.get(m).get(otherPerson).x;
+                    m.yvelocity += DT * p.get(m).get(otherPerson) * vectors.ein.get(m).get(otherPerson).y;
+                    otherPerson.xvelocity -= DT * p.get(m).get(otherPerson) * vectors.ein.get(m).get(otherPerson).x;
+                    otherPerson.yvelocity -= DT * p.get(m).get(otherPerson) * vectors.ein.get(m).get(otherPerson).y;
+                    let d = {
+                        x: m.x - otherPerson.x,
+                        y: m.y - otherPerson.y
+                    };
+                    let alpha = DT * RHO * (this.ps(d, vectors.ein.get(m).get(otherPerson)) - (m.r + otherPerson.r) - vectors.s.get(m).get(otherPerson));
+                    m.xvelocity -= alpha * vectors.ein.get(m).get(otherPerson).x;
+                    m.yvelocity -= alpha * vectors.ein.get(m).get(otherPerson).y;
+                    otherPerson.xvelocity += alpha * vectors.ein.get(m).get(otherPerson).x;
+                    otherPerson.yvelocity += alpha * vectors.ein.get(m).get(otherPerson).y;
+                }
+                for (const personne of this.personnes) {
+                    let pos = {
+                        x: personne.x,
+                        y: personne.y
                     }
-            if(!person.isOutside) {
-                let collisionObject = this.pieceCollision(person);
-                person.pieceCollision(collisionObject.collisionType,this);
+                    personne.x = vectors.x_n.get(personne).x + DT * personne.xvelocity;
+                    personne.y = vectors.x_n.get(personne).y + DT * personne.yvelocity;
+                    personne.xvelocity = (personne.x - vectors.x_n.get(personne).x) / DT;
+                    personne.yvelocity = (personne.y - vectors.x_n.get(personne).y) / DT;
+                    let d = {
+                        x : personne.x-pos.x,
+                        y : personne.y-pos.y
+                    };
+                    residueX = Math.max(residueX,Math.sqrt(Math.pow(d.x,2)+Math.pow(d.y,2))/DT);
+                }
+                let residueS = 0;
+                for (const [k,m] of vectors.I) {
+                    let otherPerson = vectors.J.get(m);
+                    let d = {
+                        x : m.x - otherPerson.x,
+                        y : m.y - otherPerson.y
+                    };
+                    let updated_s = this.plus(-p.get(m).get(otherPerson)/RHO+this.ps(d,vectors.ein.get(m).get(otherPerson))-(m.r+otherPerson.r));
+                    residueS = Math.max(residueS,Math.abs(s.get(m).get(otherPerson)-updated_s));
+                    s.get(m).set(otherPerson,updated_s);
+                }
+                residueX+=residueS;
             }
-            person.draw();
+            residue = 0;
+            for (const [k,m] of this.allVectors.I) {
+                let otherPerson = this.allVectors.J.get(m);
+                let d = {
+                    x : m.x - otherPerson.x,
+                    y : m.y - otherPerson.y
+                };
+                let dp = this.ps(d,this.allVectors.ein.get(m).get(otherPerson)-(m.r+otherPerson.r)-s.get(m).get(otherPerson));
+                p.get(m).set(otherPerson,p.get(m).get(otherPerson)-RHO*dp);
+                residue = Math.max(residue,Math.abs(dp));
+            }
         }
+        for(const person of this.personnes)
+            person.draw();
+        console.log(this.getDistanceToLine(this.personnes[0]));
+    }
+
+    ps(vec1,vec2)
+    {
+        return vec1.x*vec2.x+vec1.y*vec2.y;
+    }
+
+    initP()
+    {
+        let p = new Map();
+        for (const person of this.personnes) {
+            p.set(person,new Map());
+            for(const person1 of this.personnes)
+                p.get(person).set(person1,0);
+        }
+        return p;
     }
 
     /**
