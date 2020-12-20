@@ -1,4 +1,4 @@
-class GameRender{
+class ModelRender{
 
     /**
      *

@@ -1,6 +1,6 @@
 class Personne extends CanvasElement{
 
-    constructor(cvs,obj,xvelocity,yvelocity) {
+    constructor(cvs,obj,xvelocity,yvelocity,acceleration) {
         super(cvs);
         this.x = obj.x;
         this.y = obj.y;
@@ -10,6 +10,7 @@ class Personne extends CanvasElement{
         this.nbOutside = 0;
         this.isOutside = false;
         this.blueValue = 100;
+        this.coefficient = acceleration;
         this.cst_velocity = {
             x : xvelocity,
             y : yvelocity,
