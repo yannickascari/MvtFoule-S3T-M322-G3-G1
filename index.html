@@ -14,10 +14,31 @@
 </head>
 <body>
 <header>
+    <h1 style="text-align: center">Simulateur de mouvement de foule</h1>
+    <p></p>
 </header>
-<div>
+<div style="visibility: hidden">
     <canvas id="cvs" width="1000" height="1000">Impossible de charger le canvas ! Changer de navigateur</canvas>
 </div>
+<div id="begin">
+    <label for="boules">Nombre de personnes</label>
+
+    <input type="text" id="boules" name="Nombre de boules" required
+           minlength="0" maxlength="2" size="2">
+    <button id="launchModel">Go !</button>
+
+    <p>Avec obstacles ?</p>
+
+    <input type="radio" id="avec" name="drone" value="avec"
+           checked>
+    <label for="avec">Avec</label>
+
+    <input type="radio" id="sans" name="drone" value="sans"
+           checked>
+
+    <label for="sans">Sans</label>
+</div>
+
 </body>
 <script type="text/javascript" src="scripts/models/Constant.js"></script>
 <script type="text/javascript" src="scripts/models/CanvasElement.js"></script>

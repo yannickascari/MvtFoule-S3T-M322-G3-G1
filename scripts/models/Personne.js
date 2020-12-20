@@ -8,7 +8,6 @@ class Personne extends CanvasElement{
         this.yvelocity = yvelocity;
         this.xvelocity = xvelocity;
         this.nbOutside = 0;
-        this.isOutside = false;
         this.blueValue = 100;
         this.coefficient = acceleration;
         this.cst_velocity = {
@@ -29,54 +28,17 @@ class Personne extends CanvasElement{
 
     }
 
-    move()
-    {
-
-        this.x += this.xvelocity;
-        this.y += this.yvelocity;
-
-    }
-
-    noHorizontalVelocity()
-    {
-        this.xvelocity = 0;
-    }
-
-    noVerticalVelocity()
-    {
-        this.yvelocity = 0;
-    }
 
     /**
      *
-     * @param CollisionType
-     * @param piece {Piece}
+     * @param pieceC {Piece}
      */
 
-    pieceCollision(CollisionType,piece)
+    isOutside(pieceC)
     {
-        if(CollisionType === "XY"){
-            this.noHorizontalVelocity();
-            this.noVerticalVelocity();
-        }
-        else if(CollisionType === "Y")
-            this.noVerticalVelocity();
-        else if(CollisionType === "X") {
-            this.noHorizontalVelocity();
-            if(this.y>=piece.exitPosition.y)
-                this.yvelocity = -Math.abs(this.yvelocity);
-            else
-                this.yvelocity = Math.abs(this.yvelocity);
-        }
-        else if(CollisionType === "exit") {
-            this.resetVelocity();
-            this.isOutside = true;
-            this.yvelocity = this.xvelocity/4;
-            this.nbOutside++;
-        }
-
+        return this.x - this.r <= pieceC.x;
     }
-    
+
     getEinVector(person)
     {
         let norme = this.getNorme(person);
@@ -103,43 +65,6 @@ class Personne extends CanvasElement{
             y : this.y - person.y,
         }
         return ein.x * x2x1.x + ein.y * x2x1.y >= this.r + person.r;
-    }
-
-    increaseBlue(person)
-    {
-        this.blueValue=(255-this.getNorme(person));
-    }
-
-    /**
-     *
-     * @param person {Personne}
-     * @returns {boolean}
-     */
-
-    isFasterThan(person)
-    {
-        let speed = (this.cst_velocity.x + this.cst_velocity.y)/2;
-        let speedPerson = (person.cst_velocity.x + person.cst_velocity.y)/2;
-        return speed>speedPerson;
-    }
-
-    /**
-     *
-     * @param person {Personne}
-     */
-
-    handleCollision(person)
-    {
-        this.increaseBlue(person);
-        /*if(this.isFasterThan(person))
-        {
-            person.yvelocity = this.yvelocity;
-            person.xvelocity = this.xvelocity;
-        }
-        else{
-            this.xvelocity = person.xvelocity;
-            this.yvelocity = person.yvelocity;
-        }*/
     }
 
     resetVelocity()

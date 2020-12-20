@@ -11,9 +11,10 @@ class Piece extends CanvasElement{
      * @param nbP
      * @param obstacles{Array<Obstacle>}
      */
-    constructor(cvs,x,y,h,w,h_s,nbP,obstacles) {
+    constructor(cvs,x,y,h,w,h_s,nbP,obstacles,hasObstacle) {
         super(cvs);
         this.x = x;
+        this.hasObstacle = hasObstacle;
         this.y = y;
         this.cst_x = x;
         this.cst_y = y;
@@ -23,9 +24,9 @@ class Piece extends CanvasElement{
         this.personnes = [];
         for(let i = 0;i<nbP;++i)
         {
-            let o = this.getRndPerso();
+            let o = this.getRndPerso(obstacles[1]);
             while (!this.isNotSuperImposed(o))
-                o = this.getRndPerso();
+                o = this.getRndPerso(obstacles[1]);
             let object = this.getVectorToExit(o);
             const coefficient = Piece.getRndInteger(VELOCITY_MIN,VELOCITY_MAX);
             let vx = object.x*coefficient;
@@ -35,6 +36,11 @@ class Piece extends CanvasElement{
         }
 
         this.obstacles = obstacles;
+        this.obstacles.push(new Obstacle(cvs,this.cst_x,this.cst_y,this.cst_x+this.w,this.cst_y));
+        this.obstacles.push(new Obstacle(cvs,this.cst_x+this.w,this.cst_y,this.cst_x+this.w,this.y+this.h));
+        this.obstacles.push(new Obstacle(cvs,this.cst_x,this.y+this.h,this.cst_x+this.w,this.cst_y+this.h));
+        this.obstacles.push(new Obstacle(cvs,this.cst_x,this.cst_y,this.cst_x,this.cst_y+this.h/2-this.h_s/2));
+        this.obstacles.push(new Obstacle(cvs,this.cst_x,this.cst_y+this.h/2+this.h_s/2,this.cst_x,this.cst_y+this.h));
 
     }
 
@@ -42,9 +48,29 @@ class Piece extends CanvasElement{
         return (v1.x*v2.y-v1.y*v2.x);
     }
 
-    getDistanceToLine(person)
+    allOutside()
     {
-        return Math.abs(this.cst_x*person.x+this.cst_y*person.y+this.h)/(Math.sqrt(Math.pow(this.cst_x,2)+Math.pow(this.cst_y,2)));
+        for(const personne of this.personnes) {
+            if (!personne.isOutside(this))
+                return false;
+        }
+        return true;
+    }
+
+    async statistic()
+    {
+        return new Promise(resolve => {
+            let nbOutside = 0;
+            for(const personne of this.personnes)
+            {
+                if(personne.isOutside(this))
+                    nbOutside++;
+            }
+            resolve({
+                nbOutside : nbOutside,
+                nbInside : this.personnes.length - nbOutside
+            });
+        })
     }
 
     get allVectors()
@@ -86,6 +112,7 @@ class Piece extends CanvasElement{
             X.set(obstacle,new Map());
             E.set(obstacle,new Map());
             S.set(obstacle,new Map());
+            Jo.set(obstacle,[]);
             for(const person of this.personnes) {
                 let v = {
                     x: person.x - obstacle.x,
@@ -103,12 +130,10 @@ class Piece extends CanvasElement{
                     XVector.x = obstacle.x1;
                     XVector.y = obstacle.y1;
                 } else {
-
                     let tau = {
-                        x: obstacle.NVector.x,
-                        y: obstacle.NVector.y
+                        x: obstacle.NVector.y,
+                        y: -obstacle.NVector.x
                     }
-                    //console.log(tau);
                     XVector.x = obstacle.x + l * tau.x;
                     XVector.y = obstacle.y + l * tau.y;
                 }
@@ -127,7 +152,7 @@ class Piece extends CanvasElement{
                 S.get(obstacle).set(person,Smap);
                 if (S.get(obstacle).get(person) < (1 + person.r) / 10)
                 {
-                    Jo.set(obstacle,person);
+                    Jo.get(obstacle).push(person);
                 }
             }
         }
@@ -174,7 +199,7 @@ class Piece extends CanvasElement{
     drawLine(a_x,a_y)
     {
 
-        ctx.beginPath();
+        this.canvas.beginPath();
         this.canvas.strokeStyle = COLOR;
         this.canvas.moveTo(this.x,this.y);
         this.canvas.lineTo(this.x+a_x,this.y+a_y);
@@ -192,11 +217,17 @@ class Piece extends CanvasElement{
         return true;
     }
 
-    getRndPerso()
+    /**
+     *
+     * @param obstacle {Obstacle}
+     * @returns {{r: *, x: *, y: *}}
+     */
+
+    getRndPerso(obstacle)
     {
         let r = Piece.getRndInteger(13,17)
         return {
-            x : Piece.getRndInteger(this.x+r,this.x+this.w - r),
+            x : Piece.getRndInteger(this.x+((this.hasObstacle)?obstacle.x1:0)+r,this.x+this.w - r),
             y : Piece.getRndInteger(this.y+r,this.y+this.h-r),
             r : r
         }
@@ -272,17 +303,19 @@ class Piece extends CanvasElement{
                         otherPerson.yvelocity += alpha * vectors.ein.get(m).get(otherPerson).y;
                     }
                 }
-                for(const [io,j] of vectors.Jo)
+                for(const [io,arr] of vectors.Jo)
                 {
-                    j.xvelocity -= DT*P.get(io).get(j)*vectors.E.get(io).get(j).x;
-                    j.yvelocity -= DT*P.get(io).get(j)*vectors.E.get(io).get(j).y;
-                    let d = {
-                        x : vectors.X.get(io).get(j).x - j.x,
-                        y : vectors.X.get(io).get(j).y - j.y
-                    };
-                    let alpha = DT*RHO*(this.ps(d,vectors.E.get(io).get(j))-(1+j.r)-S.get(io).get(j));
-                    j.xvelocity+=alpha*vectors.E.get(io).get(j).x;
-                    j.yvelocity+=alpha*vectors.E.get(io).get(j).y;
+                    for(const j of arr) {
+                        j.xvelocity -= DT * P.get(io).get(j) * vectors.E.get(io).get(j).x;
+                        j.yvelocity -= DT * P.get(io).get(j) * vectors.E.get(io).get(j).y;
+                        let d = {
+                            x: vectors.X.get(io).get(j).x - j.x,
+                            y: vectors.X.get(io).get(j).y - j.y
+                        };
+                        let alpha = DT * RHO * (this.ps(d, vectors.E.get(io).get(j)) - (1 + j.r) - S.get(io).get(j));
+                        j.xvelocity += alpha * vectors.E.get(io).get(j).x;
+                        j.yvelocity += alpha * vectors.E.get(io).get(j).y;
+                    }
                 }
                 for (const personne of this.personnes) {
                     let pos = {
@@ -312,15 +345,17 @@ class Piece extends CanvasElement{
                         s.get(m).set(otherPerson, updated_s);
                     }
                 }
-                for(const [io,j] of vectors.Jo)
+                for(const [io,arr] of vectors.Jo)
                 {
-                    let d = {
-                        x : vectors.X.get(io).get(j).x - j.x,
-                        y : vectors.X.get(io).get(j).y - j.y
+                    for(const j of arr) {
+                        let d = {
+                            x: vectors.X.get(io).get(j).x - j.x,
+                            y: vectors.X.get(io).get(j).y - j.y
+                        }
+                        let updatedS = this.plus(-P.get(io).get(j) / RHO + this.ps(d, vectors.E.get(io).get(j)) - (1 + j.r));
+                        residueS = Math.max(residueS, Math.abs(S.get(io).get(j) - updatedS) / DT);
+                        S.get(io).set(j, updatedS);
                     }
-                    let updatedS = this.plus(-P.get(io).get(j)/RHO+this.ps(d,vectors.E.get(io).get(j))-(1+j.r));
-                    residueS = Math.max(residueS,Math.abs(S.get(io).get(j)-updatedS)/DT);
-                    S.get(io).set(j,updatedS);
                 }
                 residueX+=residueS;
             }
@@ -338,15 +373,17 @@ class Piece extends CanvasElement{
                 }
             }
 
-            for(const [io,j] of vectors.Jo)
+            for(const [io,arr] of vectors.Jo)
             {
-                let d = {
-                    x : vectors.X.get(io).get(j).x - j.x,
-                    y : vectors.X.get(io).get(j).y - j.y
+                for(const j of arr) {
+                    let d = {
+                        x: vectors.X.get(io).get(j).x - j.x,
+                        y: vectors.X.get(io).get(j).y - j.y
+                    }
+                    let dp = this.ps(d, vectors.E.get(io).get(j)) - (1 + j.r) - S.get(io).get(j);
+                    P.get(io).set(j, P.get(io).get(j) - RHO * dp);
+                    residue = Math.max(residue, Math.abs(dp));
                 }
-                let dp = this.ps(d,vectors.E.get(io).get(j))-(1+j.r)-S.get(io).get(j);
-                P.get(io).set(j,P.get(io).get(j)-RHO*dp);
-                residue = Math.max(residue,Math.abs(dp));
             }
         }
         for(const person of this.personnes)
@@ -395,51 +432,5 @@ class Piece extends CanvasElement{
         }
         return p;
     }
-
-    /**
-     *
-     * @param person {Personne}
-     * @returns {*}
-     */
-
-    pieceCollision(person)
-    {
-        let midLeft = this.cst_x+this.h/2;
-        let y1 = midLeft-this.h_s/2;
-        let y2 = midLeft+this.h_s/2;
-        let firstCondition = !(person.x-person.r>=this.cst_x && person.x+person.r <= this.cst_x+this.w);
-        let secondCondition = !(person.y + person.r<=this.cst_y+this.h && person.y-person.r>=this.cst_y);
-        let exitCondition = person.y-person.r>y1 && person.y+person.r<y2 && firstCondition;
-
-        if(exitCondition)
-        {
-            return {
-                collision : false,
-                collisionType : "exit",
-            }
-        }
-        else if(firstCondition && secondCondition)
-        {
-            return {
-                collision : true,
-                collisionType : "XY"
-            };
-        }
-        else if(firstCondition)
-            return {
-                collision : true,
-                collisionType : "X"
-            };
-        else if(secondCondition)
-            return {
-                collision : true,
-                collisionType: "y"
-            };
-        return {
-            collision : false,
-            collisionType: null
-        };
-    }
-
 
 }
