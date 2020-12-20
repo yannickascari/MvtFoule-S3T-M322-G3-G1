@@ -20,7 +20,7 @@ class Personne extends CanvasElement{
     {
 
         this.canvas.beginPath();
-        const color = "rgba(0,0,255,255)";
+        const color = document.querySelector("#color").value;
         this.canvas.fillStyle=color;
         this.canvas.arc(this.x, this.y, this.r, 0, 2 * Math.PI);
         this.canvas.fill();

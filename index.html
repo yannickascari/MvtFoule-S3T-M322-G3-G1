@@ -24,8 +24,8 @@
     <label for="boules">Nombre de personnes</label>
 
     <input type="text" id="boules" name="Nombre de boules" required
-           minlength="0" maxlength="2" size="2">
-    <button id="launchModel">Go !</button>
+           minlength="0" maxlength="2" size="2" value="15">
+
 
     <p>Avec obstacles ?</p>
 
@@ -33,10 +33,20 @@
            checked>
     <label for="avec">Avec</label>
 
-    <input type="radio" id="sans" name="drone" value="sans"
-           checked>
+    <input type="radio" id="sans" name="drone" value="sans">
 
     <label for="sans">Sans</label>
+
+    <br>
+    <br>
+
+    <label for="color">Couleur des personnes (Tapez la couleur en anglais minuscule)</label>
+    <input type="text" id="color" name="Couleur des personnes" required
+                                      minlength="0" maxlength="16" size="16" value="black">
+
+    <br>
+    <br>
+    <button id="launchModel">Démarrer la simulation</button>
 </div>
 
 </body>
