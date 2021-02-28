@@ -13,3 +13,11 @@ des personnes.
 
 ## Installation du projet
 Pour installer le projet il suffit juste de cloner le projet et de lancer le fichier index.html
+
+## Credits
+
+Ce projet a été réalisé pour un module de DUT informatique (M322 Modélisation Mathématique) a l'université de Nice/Sophia-Antipolis en groupe d'étudiant composé de : 
+- Antony Martin
+- Cyril Vrousos
+- Pierre Bihannic
+- Yannick Ascari
